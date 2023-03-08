@@ -1,6 +1,5 @@
 using System;
 using System.Collections.Generic;
-using System.Diagnostics;
 using System.Linq;
 using UnityEngine;
 
@@ -48,17 +47,12 @@ namespace Plugins.ObjectPooler
         {
             var objectPool = new Queue<GameObject>(pool.initialSize);
 
-            Transform poolParent = CreatePoolParent(pool.pool);
+            Transform poolFolder = CreatePoolFolder(pool.pool);
 
             for (int i = 0; i < pool.initialSize; i++)
             {
-                GameObject poolObject = InstantiateObject(pool.prefab);
-
-                poolObject.SetActive(false);
-
-                poolObject.transform.SetParent(poolParent);
-
-                objectPool.Enqueue(poolObject);
+                GameObject newPoolObject = CreateNewPoolObject(pool.pool, poolFolder);
+                objectPool.Enqueue(newPoolObject);
             }
 
             return objectPool;
@@ -69,7 +63,7 @@ namespace Plugins.ObjectPooler
             return Instantiate(prefab);
         }
 
-        private Transform CreatePoolParent(Pool pool)
+        private Transform CreatePoolFolder(Pool pool)
         {
             GameObject poolParentObj = new GameObject(pool.ToString());
 
@@ -166,15 +160,24 @@ namespace Plugins.ObjectPooler
             throw new ArgumentException("Pool '" + pool + "' does not exist.");
         }
 
-        private GameObject AddPoolObject(Pool pool)
+        private GameObject AddPoolObject(Pool pool) => AddPoolObject(pool, GetPoolFolder(pool));
+
+        private GameObject AddPoolObject(Pool pool, Transform folder)
+        {
+            GameObject newPoolObject = CreateNewPoolObject(pool, folder);
+
+            _pools[pool].Enqueue(newPoolObject);
+
+            return newPoolObject;
+        }
+
+        private GameObject CreateNewPoolObject(Pool pool, Transform folder)
         {
             GameObject newPoolObject = InstantiateObject(GetPrefab(pool));
 
             newPoolObject.SetActive(false);
 
-            newPoolObject.transform.SetParent(GetPoolFolder(pool));
-
-            _pools[pool].Enqueue(newPoolObject);
+            newPoolObject.transform.SetParent(folder);
 
             return newPoolObject;
         }
