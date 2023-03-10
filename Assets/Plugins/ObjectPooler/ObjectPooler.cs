@@ -13,7 +13,7 @@ namespace Plugins.ObjectPooler
         [Header("Preferences")]
         [SerializeField] private ObjectPool[] _poolsToCreate;
 
-        private Dictionary<Pool, Queue<GameObject>> _pools;
+        private Dictionary<Pool, Queue<PooledObject>> _pools;
 
         #region MonoBehaviour
 
@@ -21,6 +21,8 @@ namespace Plugins.ObjectPooler
         {
             _transform ??= GetComponent<Transform>();
 
+            if (_poolsToCreate == null) return;
+            
             ValidateInputData();
         }
 
@@ -35,7 +37,7 @@ namespace Plugins.ObjectPooler
 
         private void Init()
         {
-            _pools = new Dictionary<Pool, Queue<GameObject>>();
+            _pools = new Dictionary<Pool, Queue<PooledObject>>();
 
             foreach (var objectPool in _poolsToCreate)
             {
@@ -43,15 +45,15 @@ namespace Plugins.ObjectPooler
             }
         }
 
-        private Queue<GameObject> CreatePool(ObjectPool pool)
+        private Queue<PooledObject> CreatePool(ObjectPool pool)
         {
-            var objectPool = new Queue<GameObject>(pool.initialSize);
+            var objectPool = new Queue<PooledObject>(pool.initialSize);
 
             Transform poolFolder = CreatePoolFolder(pool.pool);
 
             for (int i = 0; i < pool.initialSize; i++)
             {
-                GameObject newPoolObject = CreateNewPoolObject(pool.pool, poolFolder);
+                PooledObject newPoolObject = CreateNewPoolObject(pool.pool, poolFolder);
                 objectPool.Enqueue(newPoolObject);
             }
 
@@ -87,24 +89,52 @@ namespace Plugins.ObjectPooler
                 throw new ArgumentException("Pool '" + pool + "' does not exist.");
             }
 
-            GameObject poolObject = GetAppropriatePoolObject(pool);
+            PooledObject poolObject = GetAppropriatePoolObject(pool);
 
-            if (poolObject.activeSelf) // тут ще хз
+            if (poolObject.gameObject.activeSelf)
             {
-                poolObject.SetActive(false);
+                poolObject.gameObject.SetActive(false);
             }
 
             poolObject.transform.position = position;
             poolObject.transform.rotation = rotation;
 
-            poolObject.SetActive(true);
+            poolObject.gameObject.SetActive(true);
 
-            return poolObject;
+            return poolObject.gameObject;
         }
 
-        private GameObject GetAppropriatePoolObject(Pool pool)
+        public GameObject Spawn(Pool pool, Vector3 position, LinkerData data) => Spawn(pool, position, Quaternion.identity, data);
+
+        public GameObject Spawn(Pool pool, LinkerData data) => Spawn(pool, Vector3.zero, Quaternion.identity, data);
+
+        public GameObject Spawn(Pool pool, Vector3 position, Quaternion rotation, LinkerData data)
         {
-            if (TryGetInactive(pool, out GameObject poolObject))
+            GameObject spawnedObject = Spawn(pool, position, rotation);
+            StartLinking(spawnedObject, data);
+
+            return spawnedObject;
+        }
+
+        public void StartLinking(GameObject gameObject, LinkerData data)
+        {
+            if (IsObjectPooled(gameObject, out PooledObject pooledObject))
+            {
+                pooledObject.linker.StartUpdating(data);
+            }
+        }
+
+        public void StopLinking(GameObject gameObject)
+        {
+            if (IsObjectPooled(gameObject, out PooledObject pooledObject))
+            {
+                pooledObject.linker.StopUpdating();
+            }
+        }
+
+        private PooledObject GetAppropriatePoolObject(Pool pool)
+        {
+            if (TryGetInactive(pool, out PooledObject poolObject))
             {
                 return poolObject;
             }
@@ -113,17 +143,17 @@ namespace Plugins.ObjectPooler
                 return AddPoolObject(pool);
             }
 
-            GameObject poolObj = _pools[pool].Dequeue();
+            PooledObject poolObj = _pools[pool].Dequeue();
             _pools[pool].Enqueue(poolObj);
 
             return poolObj;
         }
 
-        private bool TryGetInactive(Pool pool, out GameObject poolObject)
+        private bool TryGetInactive(Pool pool, out PooledObject poolObject)
         {
             foreach (var poolItem in _pools[pool])
             {
-                if (poolItem.activeSelf == false)
+                if (poolItem.gameObject.activeSelf == false)
                 {
                     poolObject = poolItem;
                     return true;
@@ -160,18 +190,18 @@ namespace Plugins.ObjectPooler
             throw new ArgumentException("Pool '" + pool + "' does not exist.");
         }
 
-        private GameObject AddPoolObject(Pool pool) => AddPoolObject(pool, GetPoolFolder(pool));
+        private PooledObject AddPoolObject(Pool pool) => AddPoolObject(pool, GetPoolFolder(pool));
 
-        private GameObject AddPoolObject(Pool pool, Transform folder)
+        private PooledObject AddPoolObject(Pool pool, Transform folder)
         {
-            GameObject newPoolObject = CreateNewPoolObject(pool, folder);
+            PooledObject newPoolObject = CreateNewPoolObject(pool, folder);
 
             _pools[pool].Enqueue(newPoolObject);
 
             return newPoolObject;
         }
 
-        private GameObject CreateNewPoolObject(Pool pool, Transform folder)
+        private PooledObject CreateNewPoolObject(Pool pool, Transform folder)
         {
             GameObject newPoolObject = InstantiateObject(GetPrefab(pool));
 
@@ -179,7 +209,10 @@ namespace Plugins.ObjectPooler
 
             newPoolObject.transform.SetParent(folder);
 
-            return newPoolObject;
+            PooledObject pooledObject = newPoolObject.AddComponent<PooledObject>();
+            pooledObject.linker = newPoolObject.AddComponent<PositionLinker>();
+
+            return pooledObject;
         }
 
         #endregion
@@ -198,7 +231,7 @@ namespace Plugins.ObjectPooler
         {
             foreach (var poolItem in _pools[pool])
             {
-                poolItem.SetActive(false);
+                poolItem.gameObject.SetActive(false);
             }
         }
 
@@ -209,9 +242,23 @@ namespace Plugins.ObjectPooler
                 throw new Exception("Pool '" + pool + "' is empty.");
             }
 
-            GameObject poolObject = _pools[pool].First();
+            PooledObject poolObject = _pools[pool].First();
 
             return poolObject.transform.parent;
+        }
+
+        private bool IsObjectPooled(GameObject gameObject, out PooledObject pooledObject)
+        {
+            if (gameObject.TryGetComponent(out PooledObject targetObject))
+            {
+                pooledObject = targetObject;
+                return true;
+            }
+
+            Debug.LogWarning("GameObject '" + gameObject.name + "' does not have PooledObject component.");
+
+            pooledObject = null;
+            return false;
         }
 
         #endregion
@@ -235,7 +282,7 @@ namespace Plugins.ObjectPooler
             if (pool.initialSize < 1)
             {
                 pool.initialSize = 1;
-                UnityEngine.Debug.LogError("The size of pool'" + pool.pool + "' must be greater than 0.");
+                Debug.LogError("The size of pool'" + pool.pool + "' must be greater than 0.");
             }
         }
 
@@ -244,7 +291,7 @@ namespace Plugins.ObjectPooler
             if (pool.maxExpandSize < 1)
             {
                 pool.maxExpandSize = 1;
-                UnityEngine.Debug.LogError("The max size of pool'" + pool.pool + "' must be greater than 0.");
+                Debug.LogError("The max size of pool'" + pool.pool + "' must be greater than 0.");
             }
         }
 
@@ -252,7 +299,7 @@ namespace Plugins.ObjectPooler
         {
             if (pool.prefab == null)
             {
-                UnityEngine.Debug.LogError("The prefab of pool'" + pool.pool + "' is null.");
+                Debug.LogError("The prefab of pool'" + pool.pool + "' is null.");
             }
         }
 
