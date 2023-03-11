@@ -1,12 +1,12 @@
 using UnityEngine;
 
-namespace Plugins.ObjectPooler
+namespace Plugins.ObjectPooler.Linker
 {
     [System.Serializable]
     public class LinkerData
     {
         public Transform linkTo;
         public Vector3 offset;
-        public Vector3Int axes = UnityEngine.Vector3Int.one;
+        public Vector3Int axes = Vector3Int.one;
     }
 }

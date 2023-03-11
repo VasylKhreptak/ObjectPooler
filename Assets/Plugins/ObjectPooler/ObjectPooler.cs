@@ -1,7 +1,11 @@
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq;
+using Plugins.ObjectPooler.Events;
+using Plugins.ObjectPooler.Linker;
 using UnityEngine;
+using Debug = UnityEngine.Debug;
 
 namespace Plugins.ObjectPooler
 {
@@ -14,6 +18,8 @@ namespace Plugins.ObjectPooler
         [SerializeField] private ObjectPool[] _poolsToCreate;
 
         private Dictionary<Pool, Queue<PooledObject>> _pools;
+        private Dictionary<Pool, HashSet<PooledObject>> _activePools;
+        private Dictionary<Pool, HashSet<PooledObject>> _inactivePools;
 
         #region MonoBehaviour
 
@@ -22,13 +28,18 @@ namespace Plugins.ObjectPooler
             _transform ??= GetComponent<Transform>();
 
             if (_poolsToCreate == null) return;
-            
+
             ValidateInputData();
         }
 
         private void Awake()
         {
             Init();
+        }
+
+        private void OnDestroy()
+        {
+            RemoveListeners();
         }
 
         #endregion
@@ -38,10 +49,14 @@ namespace Plugins.ObjectPooler
         private void Init()
         {
             _pools = new Dictionary<Pool, Queue<PooledObject>>();
+            _activePools = new Dictionary<Pool, HashSet<PooledObject>>();
+            _inactivePools = new Dictionary<Pool, HashSet<PooledObject>>();
 
             foreach (var objectPool in _poolsToCreate)
             {
                 _pools.Add(objectPool.pool, CreatePool(objectPool));
+                _activePools.Add(objectPool.pool, new HashSet<PooledObject>(objectPool.initialSize));
+                _inactivePools.Add(objectPool.pool, _pools[objectPool.pool].ToHashSet());
             }
         }
 
@@ -72,6 +87,68 @@ namespace Plugins.ObjectPooler
             poolParentObj.transform.SetParent(_transform);
 
             return poolParentObj.transform;
+        }
+
+        #endregion
+
+        #region ActiveInactivePoolsManagement
+
+        private void AddListener(PooledObject pooledObject)
+        {
+            pooledObject.enableEvent.onMonoCall += AddToActivePool;
+            pooledObject.enableEvent.onMonoCall += RemoveFromInactivePool;
+            pooledObject.disableEvent.onMonoCall += AddToInactivePool;
+            pooledObject.disableEvent.onMonoCall += RemoveFromActivePool;
+        }
+
+        private void RemoveListener(PooledObject pooledObject)
+        {
+            pooledObject.enableEvent.onMonoCall -= AddToActivePool;
+            pooledObject.enableEvent.onMonoCall -= RemoveFromInactivePool;
+            pooledObject.disableEvent.onMonoCall -= AddToInactivePool;
+            pooledObject.disableEvent.onMonoCall -= RemoveFromActivePool;
+        }
+
+        private void RemoveListeners()
+        {
+            foreach (var pool in _pools)
+            {
+                foreach (var pooledObject in _pools[pool.Key])
+                {
+                    RemoveListener(pooledObject);
+                }
+            }
+        }
+
+        private void AddListeners()
+        {
+            foreach (var pool in _pools)
+            {
+                foreach (var pooledObject in _pools[pool.Key])
+                {
+                    AddListener(pooledObject);
+                }
+            }
+        }
+
+        private void RemoveFromActivePool(PooledObject pooledObject)
+        {
+            _activePools[pooledObject.pool].Remove(pooledObject);
+        }
+
+        private void AddToActivePool(PooledObject pooledObject)
+        {
+            _activePools[pooledObject.pool].Add(pooledObject);
+        }
+
+        private void RemoveFromInactivePool(PooledObject pooledObject)
+        {
+            _inactivePools[pooledObject.pool].Remove(pooledObject);
+        }
+
+        private void AddToInactivePool(PooledObject pooledObject)
+        {
+            _inactivePools[pooledObject.pool].Add(pooledObject);
         }
 
         #endregion
@@ -151,13 +228,10 @@ namespace Plugins.ObjectPooler
 
         private bool TryGetInactive(Pool pool, out PooledObject poolObject)
         {
-            foreach (var poolItem in _pools[pool])
+            if (_inactivePools[pool].Count > 0)
             {
-                if (poolItem.gameObject.activeSelf == false)
-                {
-                    poolObject = poolItem;
-                    return true;
-                }
+                poolObject = _inactivePools[pool].First();
+                return true;
             }
 
             poolObject = null;
@@ -210,7 +284,16 @@ namespace Plugins.ObjectPooler
             newPoolObject.transform.SetParent(folder);
 
             PooledObject pooledObject = newPoolObject.AddComponent<PooledObject>();
+            pooledObject.pool = pool;
             pooledObject.linker = newPoolObject.AddComponent<PositionLinker>();
+            OnPooledObjectEnabled onPooledObjectEnabled = newPoolObject.AddComponent<OnPooledObjectEnabled>();
+            OnPooledObjectDisabled onPooledObjectDisabled = newPoolObject.AddComponent<OnPooledObjectDisabled>();
+            onPooledObjectEnabled.pooledObject = pooledObject;
+            onPooledObjectDisabled.pooledObject = pooledObject;
+            pooledObject.enableEvent = onPooledObjectEnabled;
+            pooledObject.disableEvent = onPooledObjectDisabled;
+
+            AddListener(pooledObject);
 
             return pooledObject;
         }
@@ -221,7 +304,7 @@ namespace Plugins.ObjectPooler
 
         public void DisableAllObjects()
         {
-            foreach (var pool in _pools)
+            foreach (var pool in _activePools)
             {
                 DisablePool(pool.Key);
             }
@@ -229,7 +312,7 @@ namespace Plugins.ObjectPooler
 
         public void DisablePool(Pool pool)
         {
-            foreach (var poolItem in _pools[pool])
+            foreach (var poolItem in _activePools[pool].ToArray())
             {
                 poolItem.gameObject.SetActive(false);
             }
@@ -254,8 +337,6 @@ namespace Plugins.ObjectPooler
                 pooledObject = targetObject;
                 return true;
             }
-
-            Debug.LogWarning("GameObject '" + gameObject.name + "' does not have PooledObject component.");
 
             pooledObject = null;
             return false;

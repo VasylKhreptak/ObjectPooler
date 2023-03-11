@@ -2,7 +2,7 @@ using System.Collections;
 using Plugins.ObjectPooler.Extensions;
 using UnityEngine;
 
-namespace Plugins.ObjectPooler
+namespace Plugins.ObjectPooler.Linker
 {
     public class PositionLinker : MonoBehaviour
     {

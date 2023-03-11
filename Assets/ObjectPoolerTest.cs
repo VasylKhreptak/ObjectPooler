@@ -24,7 +24,8 @@ public class ObjectPoolerTest : MonoBehaviour
         _objectPooler ??= FindObjectOfType<ObjectPooler>();
     }
 
-    private void Start()
+    [ContextMenu("Do Test")]
+    private void DoTest()
     {
         StartCoroutine(TestingRoutine());
     }

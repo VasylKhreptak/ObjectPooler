@@ -1,4 +1,5 @@
 using Plugins.ObjectPooler;
+using Plugins.ObjectPooler.Linker;
 using UnityEngine;
 
 public class ObjectPoolerLinkerTest : MonoBehaviour

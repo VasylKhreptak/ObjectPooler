@@ -169,16 +169,11 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   _transform: {fileID: 429999720}
   _poolsToCreate:
-  - pool: 0
+  - pool: 1
     prefab: {fileID: 957369951435534912, guid: 7df7c23c3df6bf446acadbe760d16b09, type: 3}
     initialSize: 5
     autoExpand: 1
-    maxExpandSize: 20
-  - pool: 1
-    prefab: {fileID: 957369951435534912, guid: 7df7c23c3df6bf446acadbe760d16b09, type: 3}
-    initialSize: 10
-    autoExpand: 1
-    maxExpandSize: 1000
+    maxExpandSize: 5000
 --- !u!1 &625615386
 GameObject:
   m_ObjectHideFlags: 0
@@ -529,6 +524,101 @@ Transform:
   m_Father: {fileID: 0}
   m_RootOrder: 6
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!1 &1322383574
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 1322383576}
+  - component: {fileID: 1322383575}
+  m_Layer: 0
+  m_Name: ObjectPoolerStressTest
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 0
+--- !u!114 &1322383575
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1322383574}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 175ab13ea0a7ada47acc7faaf19e4826, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  _objectPooler: {fileID: 429999721}
+  _size: 5000
+  _pool: 1
+  _testCount: 5
+--- !u!4 &1322383576
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1322383574}
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 66.91548, y: 6.6405067, z: 11.113405}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 0}
+  m_RootOrder: 9
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!1 &1431760496
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 1431760497}
+  - component: {fileID: 1431760498}
+  m_Layer: 0
+  m_Name: OneObjectSpawnStressTest
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!4 &1431760497
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1431760496}
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 40.81157, y: -31.236925, z: 0.18537414}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 0}
+  m_RootOrder: 10
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &1431760498
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1431760496}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 61e85500595f01a458e9091c46a7c17a, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  _objectPooler: {fileID: 429999721}
+  _size: 5000
+  _pool: 1
 --- !u!1 &1616847303
 GameObject:
   m_ObjectHideFlags: 0
@@ -589,7 +679,7 @@ GameObject:
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
-  m_IsActive: 0
+  m_IsActive: 1
 --- !u!4 &1785874601
 Transform:
   m_ObjectHideFlags: 0
@@ -621,6 +711,6 @@ MonoBehaviour:
   _pool: 1
   _sizeToSpawn: 5000
   _maxDistance: 100
-  _startDelay: 1
+  _startDelay: 0
   _useDelay: 0
-  _delay: 0.1
+  _delay: 0.00001

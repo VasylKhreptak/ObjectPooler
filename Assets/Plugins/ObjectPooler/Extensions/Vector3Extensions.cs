@@ -8,7 +8,7 @@ namespace Plugins.ObjectPooler.Extensions
         {
             if (axes.Is01() == false)
             {
-                Debug.LogWarning("Axes is not correct!");
+                Debug.LogWarning("Axes is not correct!Method may work not as expected!");
             }
 
             Vector3 newVector = vector;
