@@ -1,6 +1,5 @@
 using System;
 using System.Collections.Generic;
-using System.Diagnostics;
 using System.Linq;
 using Plugins.ObjectPooler.Events;
 using Plugins.ObjectPooler.Linker;
@@ -15,12 +14,17 @@ namespace Plugins.ObjectPooler
         [SerializeField] private Transform _transform;
 
         [Header("Preferences")]
+        [Tooltip("Allocates memory for the maximum size of the pool(MaxExpandSize)."
+            + " This will reduce the amount of memory allocations, but will increase the memory usage.")]
+        [SerializeField] private bool _allocateMaxMemorySize;
+
+        [Header("Pools")]
         [SerializeField] private ObjectPool[] _poolsToCreate;
 
         private Dictionary<Pool, Queue<PooledObject>> _pools;
         private Dictionary<Pool, HashSet<PooledObject>> _activePools;
         private Dictionary<Pool, HashSet<PooledObject>> _inactivePools;
-
+        
         #region MonoBehaviour
 
         private void OnValidate()
@@ -55,14 +59,14 @@ namespace Plugins.ObjectPooler
             foreach (var objectPool in _poolsToCreate)
             {
                 _pools.Add(objectPool.pool, CreatePool(objectPool));
-                _activePools.Add(objectPool.pool, new HashSet<PooledObject>(objectPool.initialSize));
+                _activePools.Add(objectPool.pool, new HashSet<PooledObject>(_allocateMaxMemorySize ? objectPool.maxExpandSize : objectPool.initialSize));
                 _inactivePools.Add(objectPool.pool, _pools[objectPool.pool].ToHashSet());
             }
         }
 
         private Queue<PooledObject> CreatePool(ObjectPool pool)
         {
-            var objectPool = new Queue<PooledObject>(pool.initialSize);
+            var objectPool = new Queue<PooledObject>(_allocateMaxMemorySize ? pool.maxExpandSize : pool.initialSize);
 
             Transform poolFolder = CreatePoolFolder(pool.pool);
 
@@ -238,7 +242,7 @@ namespace Plugins.ObjectPooler
             return false;
         }
 
-        private GameObject GetPrefab(Pool pool)
+        public GameObject GetPrefab(Pool pool)
         {
             foreach (var objectPool in _poolsToCreate)
             {
