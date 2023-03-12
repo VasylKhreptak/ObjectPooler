@@ -24,7 +24,7 @@ namespace Plugins.ObjectPooler
         private Dictionary<Pool, Queue<PooledObject>> _pools;
         private Dictionary<Pool, HashSet<PooledObject>> _activePools;
         private Dictionary<Pool, HashSet<PooledObject>> _inactivePools;
-        
+
         #region MonoBehaviour
 
         private void OnValidate()
@@ -99,18 +99,14 @@ namespace Plugins.ObjectPooler
 
         private void AddListener(PooledObject pooledObject)
         {
-            pooledObject.enableEvent.onMonoCall += AddToActivePool;
-            pooledObject.enableEvent.onMonoCall += RemoveFromInactivePool;
-            pooledObject.disableEvent.onMonoCall += AddToInactivePool;
-            pooledObject.disableEvent.onMonoCall += RemoveFromActivePool;
+            pooledObject.enableEvent.onMonoCall += OnObjectEnabled;
+            pooledObject.disableEvent.onMonoCall += OnObjectDisabled;
         }
 
         private void RemoveListener(PooledObject pooledObject)
         {
-            pooledObject.enableEvent.onMonoCall -= AddToActivePool;
-            pooledObject.enableEvent.onMonoCall -= RemoveFromInactivePool;
-            pooledObject.disableEvent.onMonoCall -= AddToInactivePool;
-            pooledObject.disableEvent.onMonoCall -= RemoveFromActivePool;
+            pooledObject.enableEvent.onMonoCall -= OnObjectEnabled;
+            pooledObject.disableEvent.onMonoCall -= OnObjectDisabled;
         }
 
         private void RemoveListeners()
@@ -142,6 +138,18 @@ namespace Plugins.ObjectPooler
         private void RemoveFromInactivePool(PooledObject pooledObject) => _inactivePools[pooledObject.pool].Remove(pooledObject);
 
         private void AddToInactivePool(PooledObject pooledObject) => _inactivePools[pooledObject.pool].Add(pooledObject);
+
+        private void OnObjectEnabled(PooledObject pooledObject)
+        {
+            AddToActivePool(pooledObject);
+            RemoveFromInactivePool(pooledObject);
+        }
+
+        private void OnObjectDisabled(PooledObject pooledObject)
+        {
+            RemoveFromActivePool(pooledObject);
+            AddToInactivePool(pooledObject);
+        }
 
         #endregion
 
