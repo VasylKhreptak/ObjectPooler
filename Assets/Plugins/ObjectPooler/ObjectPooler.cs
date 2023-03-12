@@ -28,7 +28,7 @@ namespace Plugins.ObjectPooler
         {
             return _allocateMaxMemorySize ? preference.maxExpandSize : preference.initialSize;
         }
-        
+
         #region MonoBehaviour
 
         private void OnValidate()
