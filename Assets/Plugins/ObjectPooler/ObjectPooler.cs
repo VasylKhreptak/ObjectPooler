@@ -168,17 +168,12 @@ namespace Plugins.ObjectPooler
             }
 
             PooledObject poolObject = GetAppropriatePoolObject(pool);
+            GameObject pooledGameObject = poolObject.gameObject;
 
-            if (poolObject.gameObject.activeSelf)
-            {
-                poolObject.gameObject.SetActive(false);
-            }
-
-            Transform poolObjectTransform = poolObject.transform;
+            Transform poolObjectTransform = pooledGameObject.transform;
             poolObjectTransform.position = position;
             poolObjectTransform.rotation = rotation;
 
-            GameObject pooledGameObject = poolObject.gameObject;
             pooledGameObject.SetActive(true);
 
             return pooledGameObject;
@@ -224,6 +219,7 @@ namespace Plugins.ObjectPooler
             }
 
             PooledObject poolObj = _pools[pool].Dequeue();
+            poolObj.gameObject.SetActive(false);
             _pools[pool].Enqueue(poolObj);
 
             return poolObj;

@@ -11,7 +11,7 @@ public class OnObjectSpawnStressTest : MonoBehaviour
 
    [Header("Preferences")]
    [SerializeField] private int _size = 5000;
-   [SerializeField] private Pool _pool = Pool.TestPool2;
+   [SerializeField] private Pool _pool = Pool.TestPool;
    
    private void OnValidate()
    {
