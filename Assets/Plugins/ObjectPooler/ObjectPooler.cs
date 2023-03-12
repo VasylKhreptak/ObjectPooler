@@ -355,27 +355,27 @@ namespace Plugins.ObjectPooler
 
         private void ValidateInitialSize(PoolPreference poolPreference)
         {
-            if (poolPreference.initialSize < 1)
-            {
-                poolPreference.initialSize = 1;
-            }
-
             if (poolPreference.initialSize > poolPreference.maxExpandSize)
             {
                 poolPreference.initialSize = poolPreference.maxExpandSize;
+            }
+
+            if (poolPreference.initialSize < 1)
+            {
+                poolPreference.initialSize = 1;
             }
         }
 
         private void ValidateMaxExpandSize(PoolPreference poolPreference)
         {
-            if (poolPreference.maxExpandSize < 1)
-            {
-                poolPreference.maxExpandSize = 1;
-            }
-
             if (poolPreference.maxExpandSize < poolPreference.initialSize)
             {
                 poolPreference.maxExpandSize = poolPreference.initialSize;
+            }
+
+            if (poolPreference.maxExpandSize < 1)
+            {
+                poolPreference.maxExpandSize = 1;
             }
         }
 
