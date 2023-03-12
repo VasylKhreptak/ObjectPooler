@@ -3,18 +3,13 @@ using System.Collections.Generic;
 using System.Linq;
 using Plugins.ObjectPooler.Linker;
 using UnityEngine;
-using Debug = UnityEngine.Debug;
 
 namespace Plugins.ObjectPooler
 {
     public class ObjectPooler : MonoBehaviour
     {
-        [Header("References")]
-        [SerializeField] private Transform _transform;
-
         [Header("Preferences")]
-        [Tooltip("Allocates memory for the maximum size of the pool(MaxExpandSize)."
-            + " This will reduce the amount of memory allocations, but will increase the memory usage.")]
+        [Tooltip("Allocates memory for the maximum size of the pool(MaxExpandSize).This will reduce the amount of memory allocations, but will increase the memory usage.")]
         [SerializeField] private bool _allocateMaxMemorySize;
 
         [Header("Pools")]
@@ -23,6 +18,8 @@ namespace Plugins.ObjectPooler
         private Dictionary<Pool, Queue<PooledObject>> _pools;
         private Dictionary<Pool, HashSet<PooledObject>> _activePools;
         private Dictionary<Pool, HashSet<PooledObject>> _inactivePools;
+
+        private Transform _transform;
 
         private int GetCollectionCapacity(PoolPreference preference)
         {
@@ -33,7 +30,7 @@ namespace Plugins.ObjectPooler
 
         private void OnValidate()
         {
-            _transform ??= GetComponent<Transform>();
+            _transform = transform;
 
             if (_poolsPreferences == null) return;
 
@@ -348,13 +345,11 @@ namespace Plugins.ObjectPooler
 
         private void ValidateInputData()
         {
-            foreach (var pool in _poolsPreferences)
+            foreach (var poolPreferences in _poolsPreferences)
             {
-                ValidateInitialSize(pool);
+                ValidateInitialSize(poolPreferences);
 
-                ValidateMaxExpandSize(pool);
-
-                ValidatePrefab(pool);
+                ValidateMaxExpandSize(poolPreferences);
             }
         }
 
@@ -363,7 +358,11 @@ namespace Plugins.ObjectPooler
             if (poolPreference.initialSize < 1)
             {
                 poolPreference.initialSize = 1;
-                Debug.LogError("The size of pool'" + poolPreference.pool + "' must be greater than 0.");
+            }
+
+            if (poolPreference.initialSize > poolPreference.maxExpandSize)
+            {
+                poolPreference.initialSize = poolPreference.maxExpandSize;
             }
         }
 
@@ -372,15 +371,11 @@ namespace Plugins.ObjectPooler
             if (poolPreference.maxExpandSize < 1)
             {
                 poolPreference.maxExpandSize = 1;
-                Debug.LogError("The max size of pool'" + poolPreference.pool + "' must be greater than 0.");
             }
-        }
 
-        private void ValidatePrefab(PoolPreference poolPreference)
-        {
-            if (poolPreference.prefab == null)
+            if (poolPreference.maxExpandSize < poolPreference.initialSize)
             {
-                Debug.LogError("The prefab of pool'" + poolPreference.pool + "' is null.");
+                poolPreference.maxExpandSize = poolPreference.initialSize;
             }
         }
 
@@ -389,10 +384,15 @@ namespace Plugins.ObjectPooler
         [Serializable]
         private class PoolPreference
         {
+            [Tooltip("Type of pool.")]
             public Pool pool;
+            [Tooltip("Prefab of pool object.")]
             public GameObject prefab;
+            [Tooltip("Initial size of pool.")]
             public int initialSize = 5;
+            [Tooltip("Should pool expand automatically?")]
             public bool autoExpand;
+            [Tooltip("Max expanded size of pool.")]
             public int maxExpandSize = 20;
         }
     }
