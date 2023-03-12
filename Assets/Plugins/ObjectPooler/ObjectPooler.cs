@@ -135,25 +135,13 @@ namespace Plugins.ObjectPooler
             }
         }
 
-        private void RemoveFromActivePool(PooledObject pooledObject)
-        {
-            _activePools[pooledObject.pool].Remove(pooledObject);
-        }
+        private void RemoveFromActivePool(PooledObject pooledObject) => _activePools[pooledObject.pool].Remove(pooledObject);
 
-        private void AddToActivePool(PooledObject pooledObject)
-        {
-            _activePools[pooledObject.pool].Add(pooledObject);
-        }
+        private void AddToActivePool(PooledObject pooledObject) => _activePools[pooledObject.pool].Add(pooledObject);
 
-        private void RemoveFromInactivePool(PooledObject pooledObject)
-        {
-            _inactivePools[pooledObject.pool].Remove(pooledObject);
-        }
+        private void RemoveFromInactivePool(PooledObject pooledObject) => _inactivePools[pooledObject.pool].Remove(pooledObject);
 
-        private void AddToInactivePool(PooledObject pooledObject)
-        {
-            _inactivePools[pooledObject.pool].Add(pooledObject);
-        }
+        private void AddToInactivePool(PooledObject pooledObject) => _inactivePools[pooledObject.pool].Add(pooledObject);
 
         #endregion
 
@@ -177,12 +165,14 @@ namespace Plugins.ObjectPooler
                 poolObject.gameObject.SetActive(false);
             }
 
-            poolObject.transform.position = position;
-            poolObject.transform.rotation = rotation;
+            Transform poolObjectTransform = poolObject.transform;
+            poolObjectTransform.position = position;
+            poolObjectTransform.rotation = rotation;
 
-            poolObject.gameObject.SetActive(true);
+            GameObject pooledGameObject = poolObject.gameObject;
+            pooledGameObject.SetActive(true);
 
-            return poolObject.gameObject;
+            return pooledGameObject;
         }
 
         public GameObject Spawn(Pool pool, Vector3 position, LinkerData data) => Spawn(pool, position, Quaternion.identity, data);
