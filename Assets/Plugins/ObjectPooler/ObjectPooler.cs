@@ -1,7 +1,6 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using Plugins.ObjectPooler.Events;
 using Plugins.ObjectPooler.Linker;
 using UnityEngine;
 using Debug = UnityEngine.Debug;
@@ -19,19 +18,24 @@ namespace Plugins.ObjectPooler
         [SerializeField] private bool _allocateMaxMemorySize;
 
         [Header("Pools")]
-        [SerializeField] private ObjectPool[] _poolsToCreate;
+        [SerializeField] private PoolPreference[] _poolsPreferences;
 
         private Dictionary<Pool, Queue<PooledObject>> _pools;
         private Dictionary<Pool, HashSet<PooledObject>> _activePools;
         private Dictionary<Pool, HashSet<PooledObject>> _inactivePools;
 
+        private int GetCollectionCapacity(PoolPreference preference)
+        {
+            return _allocateMaxMemorySize ? preference.maxExpandSize : preference.initialSize;
+        }
+        
         #region MonoBehaviour
 
         private void OnValidate()
         {
             _transform ??= GetComponent<Transform>();
 
-            if (_poolsToCreate == null) return;
+            if (_poolsPreferences == null) return;
 
             ValidateInputData();
         }
@@ -56,23 +60,23 @@ namespace Plugins.ObjectPooler
             _activePools = new Dictionary<Pool, HashSet<PooledObject>>();
             _inactivePools = new Dictionary<Pool, HashSet<PooledObject>>();
 
-            foreach (var objectPool in _poolsToCreate)
+            foreach (var poolPreferences in _poolsPreferences)
             {
-                _pools.Add(objectPool.pool, CreatePool(objectPool));
-                _activePools.Add(objectPool.pool, new HashSet<PooledObject>(_allocateMaxMemorySize ? objectPool.maxExpandSize : objectPool.initialSize));
-                _inactivePools.Add(objectPool.pool, _pools[objectPool.pool].ToHashSet());
+                _pools.Add(poolPreferences.pool, CreatePool(poolPreferences));
+                _activePools.Add(poolPreferences.pool, new HashSet<PooledObject>(GetCollectionCapacity(poolPreferences)));
+                _inactivePools.Add(poolPreferences.pool, _pools[poolPreferences.pool].ToHashSet());
             }
         }
 
-        private Queue<PooledObject> CreatePool(ObjectPool pool)
+        private Queue<PooledObject> CreatePool(PoolPreference poolPreference)
         {
-            var objectPool = new Queue<PooledObject>(_allocateMaxMemorySize ? pool.maxExpandSize : pool.initialSize);
+            var objectPool = new Queue<PooledObject>(GetCollectionCapacity(poolPreference));
 
-            Transform poolFolder = CreatePoolFolder(pool.pool);
+            Transform poolFolder = CreatePoolFolder(poolPreference.pool);
 
-            for (int i = 0; i < pool.initialSize; i++)
+            for (int i = 0; i < poolPreference.initialSize; i++)
             {
-                PooledObject newPoolObject = CreateNewPoolObject(pool.pool, poolFolder);
+                PooledObject newPoolObject = CreateNewPoolObject(poolPreference.pool, poolFolder);
                 objectPool.Enqueue(newPoolObject);
             }
 
@@ -99,14 +103,14 @@ namespace Plugins.ObjectPooler
 
         private void AddListener(PooledObject pooledObject)
         {
-            pooledObject.enableEvent.onMonoCall += OnObjectEnabled;
-            pooledObject.disableEvent.onMonoCall += OnObjectDisabled;
+            pooledObject.onEnable += OnObjectEnabled;
+            pooledObject.onDisable += OnObjectDisabled;
         }
 
         private void RemoveListener(PooledObject pooledObject)
         {
-            pooledObject.enableEvent.onMonoCall -= OnObjectEnabled;
-            pooledObject.disableEvent.onMonoCall -= OnObjectDisabled;
+            pooledObject.onEnable -= OnObjectEnabled;
+            pooledObject.onDisable -= OnObjectDisabled;
         }
 
         private void RemoveListeners()
@@ -242,7 +246,7 @@ namespace Plugins.ObjectPooler
 
         public GameObject GetPrefab(Pool pool)
         {
-            foreach (var objectPool in _poolsToCreate)
+            foreach (var objectPool in _poolsPreferences)
             {
                 if (objectPool.pool == pool)
                 {
@@ -255,11 +259,11 @@ namespace Plugins.ObjectPooler
 
         private bool IsExpandable(Pool pool)
         {
-            foreach (var objectPool in _poolsToCreate)
+            foreach (var poolPreferences in _poolsPreferences)
             {
-                if (objectPool.pool == pool)
+                if (poolPreferences.pool == pool)
                 {
-                    return objectPool.autoExpand && _pools[pool].Count < objectPool.maxExpandSize;
+                    return poolPreferences.autoExpand && _pools[pool].Count < poolPreferences.maxExpandSize;
                 }
             }
 
@@ -288,12 +292,6 @@ namespace Plugins.ObjectPooler
             PooledObject pooledObject = newPoolObject.AddComponent<PooledObject>();
             pooledObject.pool = pool;
             pooledObject.linker = newPoolObject.AddComponent<PositionLinker>();
-            OnPooledObjectEnabled onPooledObjectEnabled = newPoolObject.AddComponent<OnPooledObjectEnabled>();
-            OnPooledObjectDisabled onPooledObjectDisabled = newPoolObject.AddComponent<OnPooledObjectDisabled>();
-            onPooledObjectEnabled.pooledObject = pooledObject;
-            onPooledObjectDisabled.pooledObject = pooledObject;
-            pooledObject.enableEvent = onPooledObjectEnabled;
-            pooledObject.disableEvent = onPooledObjectDisabled;
 
             AddListener(pooledObject);
 
@@ -350,7 +348,7 @@ namespace Plugins.ObjectPooler
 
         private void ValidateInputData()
         {
-            foreach (var pool in _poolsToCreate)
+            foreach (var pool in _poolsPreferences)
             {
                 ValidateInitialSize(pool);
 
@@ -360,36 +358,36 @@ namespace Plugins.ObjectPooler
             }
         }
 
-        private void ValidateInitialSize(ObjectPool pool)
+        private void ValidateInitialSize(PoolPreference poolPreference)
         {
-            if (pool.initialSize < 1)
+            if (poolPreference.initialSize < 1)
             {
-                pool.initialSize = 1;
-                Debug.LogError("The size of pool'" + pool.pool + "' must be greater than 0.");
+                poolPreference.initialSize = 1;
+                Debug.LogError("The size of pool'" + poolPreference.pool + "' must be greater than 0.");
             }
         }
 
-        private void ValidateMaxExpandSize(ObjectPool pool)
+        private void ValidateMaxExpandSize(PoolPreference poolPreference)
         {
-            if (pool.maxExpandSize < 1)
+            if (poolPreference.maxExpandSize < 1)
             {
-                pool.maxExpandSize = 1;
-                Debug.LogError("The max size of pool'" + pool.pool + "' must be greater than 0.");
+                poolPreference.maxExpandSize = 1;
+                Debug.LogError("The max size of pool'" + poolPreference.pool + "' must be greater than 0.");
             }
         }
 
-        private void ValidatePrefab(ObjectPool pool)
+        private void ValidatePrefab(PoolPreference poolPreference)
         {
-            if (pool.prefab == null)
+            if (poolPreference.prefab == null)
             {
-                Debug.LogError("The prefab of pool'" + pool.pool + "' is null.");
+                Debug.LogError("The prefab of pool'" + poolPreference.pool + "' is null.");
             }
         }
 
         #endregion
 
         [Serializable]
-        private class ObjectPool
+        private class PoolPreference
         {
             public Pool pool;
             public GameObject prefab;

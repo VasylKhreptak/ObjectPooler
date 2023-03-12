@@ -216,12 +216,12 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   _transform: {fileID: 429999720}
   _allocateMaxMemorySize: 0
-  _poolsToCreate:
+  _poolsPreferences:
   - pool: 1
     prefab: {fileID: 957369951435534912, guid: 7df7c23c3df6bf446acadbe760d16b09, type: 3}
     initialSize: 10
     autoExpand: 1
-    maxExpandSize: 10000
+    maxExpandSize: 5000
 --- !u!1 &625615386
 GameObject:
   m_ObjectHideFlags: 0
